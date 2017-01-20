@@ -1,5 +1,8 @@
 # How to use this
 
+### Detailed documentation
+https://docs.google.com/document/d/1XHChN_zRxwnby6BSoz1QIlY9HJ-Kd5z1enWoT23A7DM/edit?usp=sharing
+
 ### Add following in project pom file:
 
 ```
