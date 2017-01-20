@@ -37,6 +37,9 @@ public class XRayApiClient {
     Integer runId;
     String projectId;
     String testDataFileId;
+    String toTestStatus;
+    String failureTransitionId;
+    String successTransitionId;
     
     /**
      * 
@@ -56,7 +59,7 @@ public class XRayApiClient {
     public XRayApiClient() throws IOException{
         configuration = new HashMap();
         Properties prop = new Properties();
-        InputStream in = XRayApiClient.class.getResourceAsStream("/jira_credentials.properties");
+        InputStream in = XRayApiClient.class.getResourceAsStream("/jira_settings.properties");
         prop.load(in);
         in.close();
         configuration.put("username", (String)prop.get("username"));
@@ -65,16 +68,18 @@ public class XRayApiClient {
         configuration.put("jenkins_job_url", (String)prop.get("jenkins_job_url"));
         
         /** read runId and projectId **/
-        Properties testRun = new Properties();
-        in = XRayApiClient.class.getResourceAsStream("/testRun_details.properties");
-        testRun.load(in);
-        in.close();
-        projectId = testRun.getProperty("projectId");
-        runId = new Integer(testRun.getProperty("runId"));
-        testDataFileId = testRun.getProperty("testDataFile");
-        if(System.getProperty("testRunId")!=null){
-            runId = new Integer(System.getProperty("testRunId"));
+        projectId = (String)prop.get("projectId");
+        toTestStatus = "TEST";
+        if(prop.containsKey("qa_swimlane_status")){
+            toTestStatus = (String)prop.get("qa_swimlane_status");
         }
+        failureTransitionId=(String)prop.get("failure_transition_id");
+        successTransitionId=(String)prop.get("success_transition_id");
+//        runId = new Integer(testRun.getProperty("runId"));
+//        testDataFileId = testRun.getProperty("testDataFile");
+//        if(System.getProperty("testRunId")!=null){
+//            runId = new Integer(System.getProperty("testRunId"));
+//        }
     }
     
     private HttpResponse<JsonNode> get(String url) throws UnirestException, TestRailApiClientException, IOException{
@@ -237,7 +242,7 @@ public class XRayApiClient {
         
         FileUtils.cleanDirectory(new File(location));
         
-        String jql = URLEncoder.encode("project="+projectId+" and status=TEST and type=Story");
+        String jql = URLEncoder.encode("project="+projectId+" and status="+toTestStatus+" and type=Story");
         JSONArray stories = get("/rest/api/2/search?jql=" + jql)
                 .getBody().getObject().getJSONArray("issues");
         for(int storyindex=0; storyindex<stories.length(); storyindex++){
@@ -484,14 +489,14 @@ public class XRayApiClient {
             if(failed){
                 Map<String, Map<String, String>> body = new HashMap();
                 Map<String, String> transition = new HashMap();
-                transition.put("id", "21");
+                transition.put("id", failureTransitionId);
                 body.put("transition", transition);
                 
                 post("/rest/api/2/issue/"+storyKey+"/transitions?expand=transitions.fields", body);
             }else{
                 Map<String, Map<String, String>> body = new HashMap();
                 Map<String, String> transition = new HashMap();
-                transition.put("id", "41");
+                transition.put("id", successTransitionId);
                 body.put("transition", transition);
                 
                 post("/rest/api/2/issue/"+storyKey+"/transitions?expand=transitions.fields", body);
